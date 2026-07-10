@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0a5c36;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .game-container {
+            background: #1e7d4e;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+        }
+        h1 { margin: 0 0 20px 0; }
+        .hands {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .hand {
+            min-width: 200px;
+            margin: 10px;
+        }
+        .hand-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .cards {
+            display: flex;
+            gap: -50px;
+            margin-left: 50px;
+        }
+        .card {
+            background: #fff;
+            color: #000;
+            width: 80px;
+            height: 120px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px;
+            box-sizing: border-box;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .card.hidden {
+            background: #222;
+            color: #fff;
+        }
+        .card .suit {
+            font-size: 20px;
+        }
+        .card .value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .card .corner {
+            font-size: 12px;
+        }
+        .controls {
+            margin: 25px 0;
+        }
+        button {
+            background: #f8d347;
+            color: #000;
+            border: none;
+            padding: 12px 25px;
+            margin: 0 8px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        button:hover {
+            background: #ffdf6b;
+            transform: scale(1.05);
+        }
+        button:disabled {
+            background: #888;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+        .status {
+            font-size: 24px;
+            margin: 20px 0;
+            min-height: 36px;
+            font-weight: bold;
+        }
+        .status.win { color: #4CAF50; }
+        .status.lose { color: #f44336; }
+        .status.push { color: #ff9800; }
+        .score {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="game-container">
+            <h1>Blackjack</h1>
+            
+            <div class="status" :class="gameStatus.class">{{ gameStatus.message }}</div>
+            
+            <div class="hands">
+                <div class="hand">
+                    <div class="hand-title">Dealer ({{ dealerScore }})</div>
+                    <div class="cards">
+                        <div class="card" v-for="(card, index) in dealerHand" :key="'d'+index" :class="{ hidden: index === 0 && !gameOver }">
+                            <div class="corner">{{ card.value }}{{ card.suit }}</div>
+                            <div class="value" style="font-size: 30px; text-align: center; width: 100%;">{{ card.value }}</div>
+                            <div class="suit" style="text-align: center; width: 100%;">{{ card.suit }}</div>
+                            <div class="corner" style="transform: rotate(180deg);">{{ card.value }}{{ card.suit }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="hand">
+                    <div class="hand-title">You ({{ playerScore }})</div>
+                    <div class="cards">
+                        <div class="card" v-for="(card, index) in playerHand" :key="'p'+index">
+                            <div class="corner">{{ card.value }}{{ card.suit }}</div>
+                            <div class="value" style="font-size: 30px; text-align: center; width: 100%;">{{ card.value }}</div>
+                            <div class="suit" style="text-align: center; width: 100%;">{{ card.suit }}</div>
+                            <div class="corner" style="transform: rotate(180deg);">{{ card.value }}{{ card.suit }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button @click="startGame" :disabled="gameStarted">Deal</button>
+                <button @click="hit" :disabled="!gameStarted || gameOver">Hit</button>
+                <button @click="stand" :disabled="!gameStarted || gameOver">Stand</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const suits = ['♥', '♦', '♣', '♠'];
+                const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+                let deck = ref([]);
+                let playerHand = ref([]);
+                let dealerHand = ref([]);
+                let gameStarted = ref(false);
+                let gameOver = ref(false);
+
+                const gameStatus = computed(() => {
+                    if (!gameStarted.value) return { message: 'Press Deal to start', class: '' };
+                    if (gameOver.value) {
+                        if (playerScore.value > 21) return { message: 'Bust! You lose.', class: 'lose' };
+                        if (dealerScore.value > 21) return { message: 'Dealer busts! You win!', class: 'win' };
+                        if (playerScore.value === dealerScore.value) return { message: 'Push! Tie game.', class: 'push' };
+                        if (playerScore.value > dealerScore.value) return { message: 'You win!', class: 'win' };
+                        if (dealerScore.value > playerScore.value) return { message: 'You lose.', class: 'lose' };
+                    }
+                    return { message: '', class: '' };
+                });
+
+                const playerScore = computed(() => calculateScore(playerHand.value));
+                const dealerScore = computed(() => calculateScore(dealerHand.value));
+
+                function createDeck() {
+                    const newDeck = [];
+                    for (const suit of suits) {
+                        for (const value of values) {
+                            newDeck.push({ suit, value });
+                        }
+                    }
+                    return shuffle(newDeck);
+                }
+
+                function shuffle(deckArray) {
+                    const array = [...deckArray];
+                    for (let i = array.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [array[i], array[j]] = [array[j], array[i]];
+                    }
+                    return array;
+                }
+
+                function calculateScore(hand) {
+                    let score = 0;
+                    let aces = 0;
+                    
+                    for (const card of hand) {
+                        if (card.value === 'A') {
+                            score += 11;
+                            aces++;
+                        } else if (['K', 'Q', 'J'].includes(card.value)) {
+                            score += 10;
+                        } else {
+                            score += parseInt(card.value);
+                        }
+                    }
+                    
+                    while (score > 21 && aces > 0) {
+                        score -= 10;
+                        aces--;
+                    }
+                    
+                    return score;
+                }
+
+                function drawCard() {
+                    if (deck.value.length < 5) {
+                        deck.value = createDeck();
+                    }
+                    return deck.value.pop();
+                }
+
+                function startGame() {
+                    deck.value = createDeck();
+                    playerHand.value = [drawCard(), drawCard()];
+                    dealerHand.value = [drawCard(), drawCard()];
+                    gameStarted.value = true;
+                    gameOver.value = false;
+                }
+
+                function hit() {
+                    playerHand.value.push(drawCard());
+                    if (playerScore.value >= 21) {
+                        gameOver.value = true;
+                    }
+                }
+
+                function stand() {
+                    gameOver.value = true;
+                    
+                    while (dealerScore.value < 17) {
+                        dealerHand.value.push(drawCard());
+                    }
+                }
+
+                return {
+                    playerHand,
+                    dealerHand,
+                    gameStarted,
+                    gameOver,
+                    gameStatus,
+                    playerScore,
+                    dealerScore,
+                    startGame,
+                    hit,
+                    stand
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
