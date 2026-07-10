@@ -297,6 +297,13 @@
             animation: pulsePush 1s ease-in-out;
         }
 
+        .random-status {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-top: 5px;
+            font-style: italic;
+        }
+
         @keyframes pulseWin {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -349,6 +356,37 @@
             }
         }
 
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(241, 196, 15, 0.2);
+            border-top: 4px solid var(--gold);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             .hands {
                 flex-direction: column;
@@ -383,8 +421,15 @@
         <div class="particle" style="left: 70%; animation-delay: 6s;"></div>
         <div class="particle" style="left: 90%; animation-delay: 8s;"></div>
         
+        <!-- Loading overlay for random.org API calls -->
+        <div class="loading-overlay" v-if="loading">
+            <div class="spinner"></div>
+            <span>Shuffling with true randomness...</span>
+        </div>
+        
         <div class="game-container">
             <h1>Anime Blackjack</h1>
+            <div class="random-status">Using RANDOM.ORG for true random shuffles</div>
             
             <div class="status" :class="gameStatus.class">{{ gameStatus.message }}</div>
             
@@ -415,9 +460,9 @@
             </div>
             
             <div class="controls">
-                <button @click="startGame" :disabled="gameStarted">Deal</button>
-                <button @click="hit" :disabled="!gameStarted || gameOver">Hit</button>
-                <button @click="stand" :disabled="!gameStarted || gameOver">Stand</button>
+                <button @click="startGame" :disabled="gameStarted || loading">Deal</button>
+                <button @click="hit" :disabled="!gameStarted || gameOver || loading">Hit</button>
+                <button @click="stand" :disabled="!gameStarted || gameOver || loading">Stand</button>
             </div>
         </div>
     </div>
@@ -425,9 +470,12 @@
     <script>
         const { createApp, ref, computed } = Vue;
 
+        // Random.org API configuration
+        const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
+        const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
+
         createApp({
             setup() {
-                // Using standard suits but with emoji symbols for display
                 const suitSymbols = { 'H': '♥', 'D': '♦', 'C': '♣', 'S': '♠' };
                 const suits = ['H', 'D', 'C', 'S'];
                 const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -437,6 +485,9 @@
                 let dealerHand = ref([]);
                 let gameStarted = ref(false);
                 let gameOver = ref(false);
+                let loading = ref(false);
+                let randomCache = ref([]);
+                let cacheIndex = ref(0);
 
                 const gameStatus = computed(() => {
                     if (!gameStarted.value) return { message: 'Ready to play?', class: '' };
@@ -461,6 +512,75 @@
                     return `https://deckofcardsapi.com/static/img/${card.value}${card.suit}.png`;
                 }
 
+                async function fetchRandomNumbers(count, min, max) {
+                    try {
+                        const response = await fetch(RANDOM_ORG_API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                jsonrpc: "2.0",
+                                method: "generateIntegers",
+                                params: {
+                                    apiKey: RANDOM_ORG_API_KEY,
+                                    n: count,
+                                    min: min,
+                                    max: max,
+                                    replacement: true
+                                },
+                                id: 1
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.result && data.result.random && data.result.random.data) {
+                            return data.result.random.data;
+                        }
+                        throw new Error('Invalid API response');
+                    } catch (error) {
+                        console.error('Random.org API error:', error);
+                        // Fallback to Math.random
+                        const result = [];
+                        for (let i = 0; i < count; i++) {
+                            result.push(Math.floor(Math.random() * (max - min + 1)) + min);
+                        }
+                        return result;
+                    }
+                }
+
+                async function preloadRandomNumbers() {
+                    loading.value = true;
+                    try {
+                        // For a full shuffle we need 51 random numbers (for 52 cards)
+                        // Each number range is [0, i] where i goes from 51 down to 1
+                        // We'll fetch 60 numbers to have a buffer, all in range [0, 51]
+                        randomCache.value = await fetchRandomNumbers(60, 0, 51);
+                        cacheIndex.value = 0;
+                    } catch (error) {
+                        console.error('Failed to preload random numbers:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                function getRandomFromCache(max) {
+                    if (cacheIndex.value >= randomCache.value.length) {
+                        // Refill cache if empty
+                        // This is synchronous fallback, shouldn't happen often
+                        return Math.floor(Math.random() * (max + 1));
+                    }
+                    const val = randomCache.value[cacheIndex.value] % (max + 1);
+                    cacheIndex.value++;
+                    return val;
+                }
+
+                function shuffle(deckArray) {
+                    const array = [...deckArray];
+                    for (let i = array.length - 1; i > 0; i--) {
+                        const j = getRandomFromCache(i);
+                        [array[i], array[j]] = [array[j], array[i]];
+                    }
+                    return array;
+                }
+
                 function createDeck() {
                     const newDeck = [];
                     for (const suit of suits) {
@@ -469,15 +589,6 @@
                         }
                     }
                     return shuffle(newDeck);
-                }
-
-                function shuffle(deckArray) {
-                    const array = [...deckArray];
-                    for (let i = array.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [array[i], array[j]] = [array[j], array[i]];
-                    }
-                    return array;
                 }
 
                 function calculateScore(hand) {
@@ -510,7 +621,8 @@
                     return deck.value.pop();
                 }
 
-                function startGame() {
+                async function startGame() {
+                    await preloadRandomNumbers();
                     deck.value = createDeck();
                     playerHand.value = [drawCard(), drawCard()];
                     dealerHand.value = [drawCard(), drawCard()];
@@ -518,14 +630,14 @@
                     gameOver.value = false;
                 }
 
-                function hit() {
+                async function hit() {
                     playerHand.value.push(drawCard());
                     if (playerScore.value >= 21) {
                         gameOver.value = true;
                     }
                 }
 
-                function stand() {
+                async function stand() {
                     gameOver.value = true;
                     
                     while (dealerScore.value < 17) {
@@ -538,6 +650,7 @@
                     dealerHand,
                     gameStarted,
                     gameOver,
+                    loading,
                     gameStatus,
                     playerScore,
                     dealerScore,
