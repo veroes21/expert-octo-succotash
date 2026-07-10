@@ -470,9 +470,10 @@
     <script>
         const { createApp, ref, computed } = Vue;
 
-        // Random.org API configuration
-        const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
-        const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
+        // Configuration - CHANGE THIS to your Azure Function URL
+        // After deploying the Azure Function, this will be something like:
+        // https://your-function-app.azurewebsites.net/api/random
+        const PROXY_URL = 'https://YOUR-AZURE-FUNCTION.azurewebsites.net/api/random';
 
         createApp({
             setup() {
@@ -514,29 +515,15 @@
 
                 async function fetchRandomNumbers(count, min, max) {
                     try {
-                        const response = await fetch(RANDOM_ORG_API_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                jsonrpc: "2.0",
-                                method: "generateIntegers",
-                                params: {
-                                    apiKey: RANDOM_ORG_API_KEY,
-                                    n: count,
-                                    min: min,
-                                    max: max,
-                                    replacement: true
-                                },
-                                id: 1
-                            })
-                        });
+                        const url = `${PROXY_URL}?count=${count}&min=${min}&max=${max}`;
+                        const response = await fetch(url);
                         const data = await response.json();
-                        if (data.result && data.result.random && data.result.random.data) {
-                            return data.result.random.data;
+                        if (Array.isArray(data)) {
+                            return data;
                         }
-                        throw new Error('Invalid API response');
+                        throw new Error('Invalid proxy response');
                     } catch (error) {
-                        console.error('Random.org API error:', error);
+                        console.error('Proxy error:', error);
                         // Fallback to Math.random
                         const result = [];
                         for (let i = 0; i < count; i++) {
@@ -550,7 +537,6 @@
                     loading.value = true;
                     try {
                         // For a full shuffle we need 51 random numbers (for 52 cards)
-                        // Each number range is [0, i] where i goes from 51 down to 1
                         // We'll fetch 60 numbers to have a buffer, all in range [0, 51]
                         randomCache.value = await fetchRandomNumbers(60, 0, 51);
                         cacheIndex.value = 0;
@@ -564,7 +550,6 @@
                 function getRandomFromCache(max) {
                     if (cacheIndex.value >= randomCache.value.length) {
                         // Refill cache if empty
-                        // This is synchronous fallback, shouldn't happen often
                         return Math.floor(Math.random() * (max + 1));
                     }
                     const val = randomCache.value[cacheIndex.value] % (max + 1);

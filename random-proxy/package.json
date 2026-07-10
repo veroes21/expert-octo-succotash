@@ -1,0 +1,9 @@
+{
+  "name": "random-proxy",
+  "version": "1.0.0",
+  "description": "Azure Function proxy for RANDOM.ORG API",
+  "main": "index.js",
+  "dependencies": {
+    "node-fetch": "^3.3.1"
+  }
+}
