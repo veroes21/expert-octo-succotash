@@ -3,147 +3,414 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blackjack</title>
+    <title>Anime Blackjack</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #9b59b6;
+            --primary-dark: #6c3483;
+            --primary-glow: #a569bd;
+            --accent: #ff79c6;
+            --accent-glow: #ff8fab;
+            --gold: #f1c40f;
+            --gold-glow: #f5d742;
+            --dark: #1a1a2e;
+            --darker: #0f0f1a;
+            --text: #e0e0e0;
+            --text-dim: #a0a0b0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background: #0a5c36;
-            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 50%, var(--primary-dark) 100%);
+            color: var(--text);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
+            position: relative;
         }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(155, 89, 182, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 121, 198, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(241, 196, 15, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
         .game-container {
-            background: #1e7d4e;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: rgba(26, 26, 46, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 35px;
+            border-radius: 20px;
+            border: 2px solid var(--primary);
+            box-shadow: 
+                0 0 30px rgba(155, 89, 182, 0.4),
+                inset 0 0 30px rgba(155, 89, 182, 0.1);
             text-align: center;
             width: 100%;
-            max-width: 800px;
+            max-width: 900px;
+            position: relative;
+            overflow: hidden;
         }
-        h1 { margin: 0 0 20px 0; }
+
+        .game-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 40%,
+                rgba(155, 89, 182, 0.03) 45%,
+                rgba(155, 89, 182, 0.06) 50%,
+                rgba(155, 89, 182, 0.03) 55%,
+                transparent 60%
+            );
+            animation: glowPulse 8s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes glowPulse {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h1 {
+            margin: 0 0 25px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--gold);
+            text-shadow: 
+                0 0 10px var(--gold-glow),
+                0 0 20px var(--gold-glow),
+                0 0 40px var(--gold-glow);
+            letter-spacing: 4px;
+            position: relative;
+        }
+
+        h1::after {
+            content: '21';
+            position: absolute;
+            right: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--accent);
+            text-shadow: 0 0 15px var(--accent-glow);
+            opacity: 0.8;
+        }
+
         .hands {
             display: flex;
             justify-content: space-between;
-            margin: 20px 0;
+            margin: 25px 0;
             flex-wrap: wrap;
+            gap: 20px;
         }
+
         .hand {
-            min-width: 200px;
-            margin: 10px;
+            min-width: 250px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            border: 1px solid rgba(155, 89, 182, 0.3);
         }
+
         .hand-title {
-            font-size: 18px;
-            margin-bottom: 10px;
-            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--accent-glow);
         }
+
         .cards {
             display: flex;
-            gap: -50px;
-            margin-left: 50px;
+            gap: -80px;
+            margin-left: 80px;
+            min-height: 140px;
         }
+
         .card {
-            background: #fff;
-            color: #000;
-            width: 80px;
-            height: 120px;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 8px;
-            box-sizing: border-box;
-            box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+            width: 100px;
+            height: 140px;
+            border-radius: 12px;
             position: relative;
+            transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+            overflow: hidden;
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(155, 89, 182, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        /* Anime-style color overlays for suits */
+        .card[data-suit="♥"] img {
+            filter: sepia(100%) saturate(200%) hue-rotate(300deg) brightness(1.2);
+        }
+        .card[data-suit="♦"] img {
+            filter: sepia(100%) saturate(300%) hue-rotate(45deg) brightness(1.1);
+        }
+        .card[data-suit="♣"] img {
+            filter: sepia(50%) saturate(200%) hue-rotate(210deg) brightness(1.1);
+        }
+        .card[data-suit="♠"] img {
+            filter: sepia(0%) saturate(100%) hue-rotate(180deg) brightness(1.1);
+        }
+
+        .card.hidden img {
+            filter: brightness(0.6) sepia(100%) saturate(0%) hue-rotate(240deg) brightness(0.8);
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 
+                0 12px 30px rgba(155, 89, 182, 0.5),
+                0 0 40px rgba(155, 89, 182, 0.2);
+            z-index: 10;
+        }
+
         .card.hidden {
-            background: #222;
-            color: #fff;
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 121, 198, 0.3);
+            border: 1px solid rgba(255, 121, 198, 0.2);
         }
-        .card .suit {
-            font-size: 20px;
-        }
-        .card .value {
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .card .corner {
-            font-size: 12px;
-        }
+
         .controls {
-            margin: 25px 0;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
         }
+
         button {
-            background: #f8d347;
-            color: #000;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #fff;
             border: none;
-            padding: 12px 25px;
-            margin: 0 8px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            padding: 14px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            transition: all 0.3s;
+            box-shadow: 
+                0 4px 15px rgba(155, 89, 182, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
         }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
         button:hover {
-            background: #ffdf6b;
-            transform: scale(1.05);
+            transform: translateY(-3px);
+            box-shadow: 
+                0 8px 25px rgba(155, 89, 182, 0.6),
+                0 0 40px rgba(155, 89, 182, 0.3);
+            background: linear-gradient(135deg, var(--primary-glow) 0%, var(--primary) 100%);
         }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
         button:disabled {
-            background: #888;
+            background: linear-gradient(135deg, #444 0%, #333 100%);
             cursor: not-allowed;
-            transform: scale(1);
+            box-shadow: none;
+            opacity: 0.6;
+            transform: none;
         }
+
+        button:disabled:hover::before {
+            left: -100%;
+        }
+
         .status {
-            font-size: 24px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
             margin: 20px 0;
-            min-height: 36px;
-            font-weight: bold;
+            min-height: 40px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px currentColor;
         }
-        .status.win { color: #4CAF50; }
-        .status.lose { color: #f44336; }
-        .status.push { color: #ff9800; }
-        .score {
-            font-size: 20px;
+
+        .status.win {
+            color: var(--accent);
+            animation: pulseWin 1s ease-in-out;
+        }
+
+        .status.lose {
+            color: #ff4757;
+            animation: pulseLose 1s ease-in-out;
+        }
+
+        .status.push {
+            color: var(--gold);
+            animation: pulsePush 1s ease-in-out;
+        }
+
+        @keyframes pulseWin {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes pulseLose {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        @keyframes pulsePush {
+            0%, 100% { transform: scale(1); text-shadow: 0 0 15px var(--gold); }
+            50% { transform: scale(1.04); text-shadow: 0 0 25px var(--gold-glow); }
+        }
+
+        .score-display {
             margin-top: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--text-dim);
+        }
+
+        /* Floating particles for anime effect */
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 15s linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+                width: 10px;
+                height: 10px;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(720deg);
+                opacity: 0;
+                width: 20px;
+                height: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hands {
+                flex-direction: column;
+                align-items: center;
+            }
+            .hand {
+                min-width: 100%;
+            }
+            .cards {
+                gap: -50px;
+                margin-left: 50px;
+                justify-content: center;
+            }
+            .game-container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            .status {
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>
 <body>
     <div id="app">
+        <!-- Floating particles -->
+        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
+        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
+        <div class="particle" style="left: 70%; animation-delay: 6s;"></div>
+        <div class="particle" style="left: 90%; animation-delay: 8s;"></div>
+        
         <div class="game-container">
-            <h1>Blackjack</h1>
+            <h1>Anime Blackjack</h1>
             
             <div class="status" :class="gameStatus.class">{{ gameStatus.message }}</div>
             
             <div class="hands">
                 <div class="hand">
-                    <div class="hand-title">Dealer ({{ dealerScore }})</div>
+                    <div class="hand-title">Dealer Hand</div>
                     <div class="cards">
-                        <div class="card" v-for="(card, index) in dealerHand" :key="'d'+index" :class="{ hidden: index === 0 && !gameOver }">
-                            <div class="corner">{{ card.value }}{{ card.suit }}</div>
-                            <div class="value" style="font-size: 30px; text-align: center; width: 100%;">{{ card.value }}</div>
-                            <div class="suit" style="text-align: center; width: 100%;">{{ card.suit }}</div>
-                            <div class="corner" style="transform: rotate(180deg);">{{ card.value }}{{ card.suit }}</div>
+                        <div class="card" v-for="(card, index) in dealerHand" :key="'d'+index" 
+                             :class="{ hidden: index === 0 && !gameOver }" 
+                             :data-suit="getSuitSymbol(card.suit)">
+                            <img v-if="!(index === 0 && !gameOver)" :src="getCardImage(card)" :alt="card.value + card.suit">
+                            <img v-else src="https://deckofcardsapi.com/static/img/back.png" alt="Card back">
                         </div>
                     </div>
+                    <div class="score-display" style="color: var(--accent);">Score: {{ dealerScore }}</div>
                 </div>
                 
                 <div class="hand">
-                    <div class="hand-title">You ({{ playerScore }})</div>
+                    <div class="hand-title">Your Hand</div>
                     <div class="cards">
-                        <div class="card" v-for="(card, index) in playerHand" :key="'p'+index">
-                            <div class="corner">{{ card.value }}{{ card.suit }}</div>
-                            <div class="value" style="font-size: 30px; text-align: center; width: 100%;">{{ card.value }}</div>
-                            <div class="suit" style="text-align: center; width: 100%;">{{ card.suit }}</div>
-                            <div class="corner" style="transform: rotate(180deg);">{{ card.value }}{{ card.suit }}</div>
+                        <div class="card" v-for="(card, index) in playerHand" :key="'p'+index"
+                             :data-suit="getSuitSymbol(card.suit)">
+                            <img :src="getCardImage(card)" :alt="card.value + card.suit">
                         </div>
                     </div>
+                    <div class="score-display" style="color: var(--gold);">Score: {{ playerScore }}</div>
                 </div>
             </div>
             
@@ -160,7 +427,9 @@
 
         createApp({
             setup() {
-                const suits = ['♥', '♦', '♣', '♠'];
+                // Using standard suits but with emoji symbols for display
+                const suitSymbols = { 'H': '♥', 'D': '♦', 'C': '♣', 'S': '♠' };
+                const suits = ['H', 'D', 'C', 'S'];
                 const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
                 let deck = ref([]);
@@ -170,19 +439,27 @@
                 let gameOver = ref(false);
 
                 const gameStatus = computed(() => {
-                    if (!gameStarted.value) return { message: 'Press Deal to start', class: '' };
+                    if (!gameStarted.value) return { message: 'Ready to play?', class: '' };
                     if (gameOver.value) {
-                        if (playerScore.value > 21) return { message: 'Bust! You lose.', class: 'lose' };
-                        if (dealerScore.value > 21) return { message: 'Dealer busts! You win!', class: 'win' };
-                        if (playerScore.value === dealerScore.value) return { message: 'Push! Tie game.', class: 'push' };
-                        if (playerScore.value > dealerScore.value) return { message: 'You win!', class: 'win' };
-                        if (dealerScore.value > playerScore.value) return { message: 'You lose.', class: 'lose' };
+                        if (playerScore.value > 21) return { message: 'BUST! Dealer Wins', class: 'lose' };
+                        if (dealerScore.value > 21) return { message: 'Dealer BUSTS! You Win!', class: 'win' };
+                        if (playerScore.value === dealerScore.value) return { message: 'PUSH! It\'s a tie', class: 'push' };
+                        if (playerScore.value > dealerScore.value) return { message: 'YOU WIN!', class: 'win' };
+                        if (dealerScore.value > playerScore.value) return { message: 'DEALER WINS', class: 'lose' };
                     }
-                    return { message: '', class: '' };
+                    return { message: 'Your move!', class: '' };
                 });
 
                 const playerScore = computed(() => calculateScore(playerHand.value));
                 const dealerScore = computed(() => calculateScore(dealerHand.value));
+
+                function getSuitSymbol(suit) {
+                    return suitSymbols[suit] || suit;
+                }
+
+                function getCardImage(card) {
+                    return `https://deckofcardsapi.com/static/img/${card.value}${card.suit}.png`;
+                }
 
                 function createDeck() {
                     const newDeck = [];
@@ -264,6 +541,8 @@
                     gameStatus,
                     playerScore,
                     dealerScore,
+                    getSuitSymbol,
+                    getCardImage,
                     startGame,
                     hit,
                     stand
