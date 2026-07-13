@@ -427,8 +427,12 @@
         const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
         const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
 
-        // List of anime girl backgrounds to cycle through
-        const animeBackgrounds = [
+        // Wallhaven API configuration
+        const WALLHAVEN_API_KEY = 'jsfrEFTjgoWn5JsIaGteiO6YnYEmzi1r';
+        const WALLHAVEN_API_URL = 'https://wallhaven.cc/api/v1/search';
+
+        // Fallback list of anime girl backgrounds
+        const fallbackBackgrounds = [
             'https://media.tenor.com/nl9X0YQ1X1MAAAAC/mini-yaemori-rent-a-girlfriend.gif',
             'https://i.imgur.com/5Jz8Q6P.jpg',
             'https://i.imgur.com/7gK5Y8x.jpg',
@@ -437,9 +441,43 @@
             'https://i.imgur.com/6XzW1vE.jpg'
         ];
 
-        // Select a random background on page load
-        const selectedBackground = animeBackgrounds[Math.floor(Math.random() * animeBackgrounds.length)];
-        document.body.style.backgroundImage = `url('${selectedBackground}')`;
+        // Fetch a random SFW anime wallpaper from Wallhaven
+        async function fetchAnimeWallpaper() {
+            try {
+                const response = await fetch(
+                    `${WALLHAVEN_API_URL}?api_key=${WALLHAVEN_API_KEY}&categories=010&purity=100&sorting=random&page=1`
+                );
+                const data = await response.json();
+                
+                if (data && data.data && data.data.length > 0) {
+                    // Filter for anime wallpapers and pick a random one
+                    const animeWallpapers = data.data.filter(wallpaper => 
+                        wallpaper.tags && wallpaper.tags.includes('anime')
+                    );
+                    
+                    if (animeWallpapers.length > 0) {
+                        const randomWallpaper = animeWallpapers[Math.floor(Math.random() * animeWallpapers.length)];
+                        return randomWallpaper.path;
+                    }
+                }
+                
+                // Fallback if no anime wallpapers found
+                throw new Error('No anime wallpapers found');
+            } catch (error) {
+                console.error('Failed to fetch from Wallhaven API:', error);
+                // Fall back to local list
+                return fallbackBackgrounds[Math.floor(Math.random() * fallbackBackgrounds.length)];
+            }
+        }
+
+        // Set the background on page load
+        async function setRandomBackground() {
+            const backgroundUrl = await fetchAnimeWallpaper();
+            document.body.style.backgroundImage = `url('${backgroundUrl}')`;
+        }
+
+        // Initialize background
+        setRandomBackground();
 
         createApp({
             setup() {
