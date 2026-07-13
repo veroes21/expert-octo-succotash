@@ -424,12 +424,14 @@
         <!-- Loading overlay for random.org API calls -->
         <div class="loading-overlay" v-if="loading">
             <div class="spinner"></div>
-            <span>Shuffling with true randomness...</span>
+            <span>{{ loadingMessage }}</span>
         </div>
         
         <div class="game-container">
             <h1>Anime Blackjack</h1>
-            <div class="random-status">Using RANDOM.ORG for true random shuffles</div>
+            <div class="random-status" :style="{ color: usingRandomOrg ? 'var(--gold)' : 'var(--text-dim)' }">
+                {{ usingRandomOrg ? 'Using RANDOM.ORG for true random shuffles' : 'Using local randomness (RANDOM.ORG unavailable)' }}
+            </div>
             
             <div class="status" :class="gameStatus.class">{{ gameStatus.message }}</div>
             
@@ -470,10 +472,10 @@
     <script>
         const { createApp, ref, computed } = Vue;
 
-        // Configuration - CHANGE THIS to your Azure Function URL
-        // After deploying the Azure Function, this will be something like:
-        // https://your-function-app.azurewebsites.net/api/random
-        const PROXY_URL = 'https://YOUR-AZURE-FUNCTION.azurewebsites.net/api/random';
+        // Configuration - Using random.org API directly with your API key
+        // Fallback to Math.random if the API fails or runs out
+        const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
+        const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
 
         createApp({
             setup() {
@@ -487,8 +489,10 @@
                 let gameStarted = ref(false);
                 let gameOver = ref(false);
                 let loading = ref(false);
+                let loadingMessage = ref('Shuffling with true randomness...');
                 let randomCache = ref([]);
                 let cacheIndex = ref(0);
+                let usingRandomOrg = ref(true);
 
                 const gameStatus = computed(() => {
                     if (!gameStarted.value) return { message: 'Ready to play?', class: '' };
@@ -515,15 +519,41 @@
 
                 async function fetchRandomNumbers(count, min, max) {
                     try {
-                        const url = `${PROXY_URL}?count=${count}&min=${min}&max=${max}`;
-                        const response = await fetch(url);
+                        // Try calling random.org API directly
+                        const response = await fetch(RANDOM_ORG_API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                jsonrpc: "2.0",
+                                method: "generateIntegers",
+                                params: {
+                                    apiKey: RANDOM_ORG_API_KEY,
+                                    n: count,
+                                    min: min,
+                                    max: max,
+                                    replacement: true
+                                },
+                                id: 1
+                            })
+                        });
+                        
                         const data = await response.json();
-                        if (Array.isArray(data)) {
-                            return data;
+                        
+                        // Check for API errors (e.g., rate limits, invalid key)
+                        if (data.error) {
+                            console.error('Random.org API error:', data.error);
+                            throw new Error('Random.org API error: ' + data.error.message);
                         }
-                        throw new Error('Invalid proxy response');
+                        
+                        if (data.result && data.result.random && data.result.random.data) {
+                            console.log('Successfully fetched random numbers from random.org');
+                            return data.result.random.data;
+                        }
+                        
+                        throw new Error('Invalid random.org response');
                     } catch (error) {
-                        console.error('Proxy error:', error);
+                        console.error('Random.org API failed, falling back to Math.random:', error);
+                        loadingMessage.value = 'Random.org unavailable, using local randomness...';
                         // Fallback to Math.random
                         const result = [];
                         for (let i = 0; i < count; i++) {
@@ -535,13 +565,21 @@
 
                 async function preloadRandomNumbers() {
                     loading.value = true;
+                    loadingMessage.value = 'Shuffling with true randomness...';
                     try {
                         // For a full shuffle we need 51 random numbers (for 52 cards)
                         // We'll fetch 60 numbers to have a buffer, all in range [0, 51]
                         randomCache.value = await fetchRandomNumbers(60, 0, 51);
                         cacheIndex.value = 0;
+                        usingRandomOrg.value = true;
+                        console.log('Successfully loaded random numbers from random.org');
                     } catch (error) {
                         console.error('Failed to preload random numbers:', error);
+                        // Ensure we still have a fallback
+                        randomCache.value = [];
+                        cacheIndex.value = 0;
+                        usingRandomOrg.value = false;
+                        loadingMessage.value = 'Using local randomness...';
                     } finally {
                         loading.value = false;
                     }
@@ -549,7 +587,8 @@
 
                 function getRandomFromCache(max) {
                     if (cacheIndex.value >= randomCache.value.length) {
-                        // Refill cache if empty
+                        // Refill cache if empty (or fall back to Math.random)
+                        console.warn('Random cache exhausted, falling back to Math.random');
                         return Math.floor(Math.random() * (max + 1));
                     }
                     const val = randomCache.value[cacheIndex.value] % (max + 1);
@@ -636,6 +675,8 @@
                     gameStarted,
                     gameOver,
                     loading,
+                    loadingMessage,
+                    usingRandomOrg,
                     gameStatus,
                     playerScore,
                     dealerScore,
