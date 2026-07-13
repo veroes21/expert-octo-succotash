@@ -27,7 +27,8 @@
 
         body {
             font-family: 'Rajdhani', sans-serif;
-            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 50%, var(--primary-dark) 100%);
+            background: url('https://media.tenor.com/nl9X0YQ1X1MAAAAC/mini-yaemori-rent-a-girlfriend.gif') no-repeat center center fixed;
+            background-size: cover;
             color: var(--text);
             display: flex;
             justify-content: center;
@@ -45,10 +46,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(155, 89, 182, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 121, 198, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(241, 196, 15, 0.05) 0%, transparent 70%);
+            background: rgba(0, 0, 0, 0.7);
             pointer-events: none;
         }
 
@@ -108,7 +106,7 @@
         h1::after {
             content: '21';
             position: absolute;
-            right: -40px;
+            right: -60px;
             top: 50%;
             transform: translateY(-50%);
             font-size: 1.2rem;
@@ -326,35 +324,7 @@
             color: var(--text-dim);
         }
 
-        /* Floating particles for anime effect */
-        .particle {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: float 15s linear infinite;
-        }
 
-        @keyframes float {
-            0% {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-                width: 10px;
-                height: 10px;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-100vh) rotate(720deg);
-                opacity: 0;
-                width: 20px;
-                height: 20px;
-            }
-        }
 
         .loading-overlay {
             position: fixed;
@@ -414,13 +384,6 @@
 </head>
 <body>
     <div id="app">
-        <!-- Floating particles -->
-        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
-        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
-        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
-        <div class="particle" style="left: 70%; animation-delay: 6s;"></div>
-        <div class="particle" style="left: 90%; animation-delay: 8s;"></div>
-        
         <!-- Loading overlay for random.org API calls -->
         <div class="loading-overlay" v-if="loading">
             <div class="spinner"></div>
