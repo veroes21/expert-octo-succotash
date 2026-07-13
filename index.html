@@ -27,7 +27,7 @@
 
         body {
             font-family: 'Rajdhani', sans-serif;
-            background: url('https://media.tenor.com/nl9X0YQ1X1MAAAAC/mini-yaemori-rent-a-girlfriend.gif') no-repeat center center fixed;
+            background: no-repeat center center fixed;
             background-size: cover;
             color: var(--text);
             display: flex;
@@ -426,6 +426,20 @@
         // Fallback to Math.random if the API fails or runs out
         const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
         const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
+
+        // List of anime girl backgrounds to cycle through
+        const animeBackgrounds = [
+            'https://media.tenor.com/nl9X0YQ1X1MAAAAC/mini-yaemori-rent-a-girlfriend.gif',
+            'https://i.imgur.com/5Jz8Q6P.jpg',
+            'https://i.imgur.com/7gK5Y8x.jpg',
+            'https://i.imgur.com/9v1hQ9g.jpg',
+            'https://i.imgur.com/3jL1z1Q.jpg',
+            'https://i.imgur.com/6XzW1vE.jpg'
+        ];
+
+        // Select a random background on page load
+        const selectedBackground = animeBackgrounds[Math.floor(Math.random() * animeBackgrounds.length)];
+        document.body.style.backgroundImage = `url('${selectedBackground}')`;
 
         createApp({
             setup() {
