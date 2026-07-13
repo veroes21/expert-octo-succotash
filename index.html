@@ -420,7 +420,7 @@
     </div>
 
     <script>
-        const { createApp, ref, computed } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
 
         // Configuration - Using random.org API directly with your API key
         // Fallback to Math.random if the API fails or runs out
@@ -618,6 +618,11 @@
                         dealerHand.value.push(drawCard());
                     }
                 }
+
+                // Auto-start the game when the component is mounted
+                onMounted(async () => {
+                    await startGame();
+                });
 
                 return {
                     playerHand,
