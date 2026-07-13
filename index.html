@@ -52,7 +52,6 @@
 
         .game-container {
             background: rgba(26, 26, 46, 0.85);
-            backdrop-filter: blur(10px);
             padding: 35px;
             border-radius: 20px;
             border: 2px solid var(--primary);
@@ -64,6 +63,20 @@
             max-width: 900px;
             position: relative;
             overflow: hidden;
+        }
+
+        /* Firefox-compatible blur effect (replaces backdrop-filter) */
+        .game-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: inherit;
+            filter: blur(10px);
+            z-index: -1;
+            opacity: 0.7;
         }
 
         .game-container::before {
@@ -85,6 +98,10 @@
             pointer-events: none;
         }
 
+        @-moz-keyframes glowPulse {
+            0% { -moz-transform: rotate(0deg); }
+            100% { -moz-transform: rotate(360deg); }
+        }
         @keyframes glowPulse {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -289,16 +306,28 @@
             font-style: italic;
         }
 
+        @-moz-keyframes pulseWin {
+            0%, 100% { -moz-transform: scale(1); }
+            50% { -moz-transform: scale(1.05); }
+        }
         @keyframes pulseWin {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
 
+        @-moz-keyframes pulseLose {
+            0%, 100% { -moz-transform: scale(1); }
+            50% { -moz-transform: scale(1.03); }
+        }
         @keyframes pulseLose {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.03); }
         }
 
+        @-moz-keyframes pulsePush {
+            0%, 100% { -moz-transform: scale(1); text-shadow: 0 0 15px var(--gold); }
+            50% { -moz-transform: scale(1.04); text-shadow: 0 0 25px var(--gold-glow); }
+        }
         @keyframes pulsePush {
             0%, 100% { transform: scale(1); text-shadow: 0 0 15px var(--gold); }
             50% { transform: scale(1.04); text-shadow: 0 0 25px var(--gold-glow); }
@@ -339,6 +368,10 @@
             margin-right: 15px;
         }
 
+        @-moz-keyframes spin {
+            0% { -moz-transform: rotate(0deg); }
+            100% { -moz-transform: rotate(360deg); }
+        }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -441,11 +474,17 @@
             'https://i.imgur.com/6XzW1vE.jpg'
         ];
 
-        // Fetch a random SFW anime wallpaper from Wallhaven
+        // Fetch a random SFW anime wallpaper from Wallhaven (Firefox-compatible)
         async function fetchAnimeWallpaper() {
             try {
                 const response = await fetch(
-                    `${WALLHAVEN_API_URL}?api_key=${WALLHAVEN_API_KEY}&categories=010&purity=100&sorting=random&page=1`
+                    `${WALLHAVEN_API_URL}?api_key=${WALLHAVEN_API_KEY}&categories=010&purity=100&sorting=random&page=1`,
+                    {
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': 'AnimeBlackjack/1.0 (Gecko-compatible)'
+                        }
+                    }
                 );
                 const data = await response.json();
                 
