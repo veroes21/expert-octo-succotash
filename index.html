@@ -153,7 +153,7 @@
 
         .cards {
             display: flex;
-            gap: -80px;
+            flex-direction: row;
             margin-left: 80px;
             min-height: 140px;
         }
@@ -163,6 +163,7 @@
             height: 140px;
             border-radius: 12px;
             position: relative;
+            margin-left: -75px;
             transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
             overflow: hidden;
             box-shadow: 
@@ -391,9 +392,14 @@
                 min-width: 100%;
             }
             .cards {
-                gap: -50px;
                 margin-left: 50px;
                 justify-content: center;
+            }
+            .card {
+                margin-left: -50px;
+            }
+            .card:first-child {
+                margin-left: 0;
             }
             .game-container {
                 padding: 20px;
