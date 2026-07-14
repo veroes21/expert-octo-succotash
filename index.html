@@ -23,6 +23,8 @@
 
         * {
             box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--darker);
         }
 
         body {
@@ -37,6 +39,8 @@
             margin: 0;
             overflow: hidden;
             position: relative;
+            -moz-osx-font-smoothing: grayscale;
+            -moz-text-size-adjust: 100%;
         }
 
         body::before {
@@ -79,7 +83,8 @@
             opacity: 0.7;
         }
 
-        .game-container::before {
+        /* Glow animation overlay */
+        .game-container::after {
             content: '';
             position: absolute;
             top: -50%;
@@ -460,59 +465,95 @@
         const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
         const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
 
-        // Wallhaven API configuration
-        const WALLHAVEN_API_KEY = 'jsfrEFTjgoWn5JsIaGteiO6YnYEmzi1r';
-        const WALLHAVEN_API_URL = 'https://wallhaven.cc/api/v1/search';
+        // MyAnimeList API callback links:
+        // Official MAL API: https://api.myanimelist.net/v2/anime/ranking (requires OAuth)
+        // Jikan (unofficial MAL API): https://api.jikan.moe/v4/top/anime (no auth needed)
+        const JIKAN_API_URL = 'https://api.jikan.moe/v4/top/anime';
 
-        // Fallback list of anime girl backgrounds
+        // Fallback backgrounds (non-imgur)
         const fallbackBackgrounds = [
             'https://media.tenor.com/nl9X0YQ1X1MAAAAC/mini-yaemori-rent-a-girlfriend.gif',
-            'https://i.imgur.com/5Jz8Q6P.jpg',
-            'https://i.imgur.com/7gK5Y8x.jpg',
-            'https://i.imgur.com/9v1hQ9g.jpg',
-            'https://i.imgur.com/3jL1z1Q.jpg',
-            'https://i.imgur.com/6XzW1vE.jpg'
+            'https://via.placeholder.com/1920x1080/1a1a2e/9b59b6?text=Anime+Blackjack'
         ];
 
-        // Fetch a random SFW anime wallpaper from Wallhaven (Firefox-compatible)
-        async function fetchAnimeWallpaper() {
+        // Helper function to get a random number, trying random.org first
+        async function getRandomNumber(min, max) {
             try {
-                const response = await fetch(
-                    `${WALLHAVEN_API_URL}?api_key=${WALLHAVEN_API_KEY}&categories=010&purity=100&sorting=random&page=1`,
-                    {
-                        headers: {
-                            'Accept': 'application/json',
-                            'User-Agent': 'AnimeBlackjack/1.0 (Gecko-compatible)'
-                        }
-                    }
-                );
+                const response = await fetch(RANDOM_ORG_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: "2.0",
+                        method: "generateIntegers",
+                        params: {
+                            apiKey: RANDOM_ORG_API_KEY,
+                            n: 1,
+                            min: min,
+                            max: max,
+                            replacement: true
+                        },
+                        id: 1
+                    })
+                });
+
                 const data = await response.json();
-                
-                if (data && data.data && data.data.length > 0) {
-                    // Filter for anime wallpapers and pick a random one
-                    const animeWallpapers = data.data.filter(wallpaper => 
-                        wallpaper.tags && wallpaper.tags.includes('anime')
-                    );
-                    
-                    if (animeWallpapers.length > 0) {
-                        const randomWallpaper = animeWallpapers[Math.floor(Math.random() * animeWallpapers.length)];
-                        return randomWallpaper.path;
-                    }
+
+                if (data.error) {
+                    throw new Error('Random.org API error: ' + data.error.message);
                 }
-                
-                // Fallback if no anime wallpapers found
-                throw new Error('No anime wallpapers found');
+
+                if (data.result && data.result.random && data.result.random.data) {
+                    console.log('Successfully fetched random number from random.org for background');
+                    return data.result.random.data[0];
+                }
+
+                throw new Error('Invalid random.org response');
             } catch (error) {
-                console.error('Failed to fetch from Wallhaven API:', error);
-                // Fall back to local list
-                return fallbackBackgrounds[Math.floor(Math.random() * fallbackBackgrounds.length)];
+                console.error('Random.org failed for background, using Math.random:', error);
+                return Math.floor(Math.random() * (max - min + 1)) + min;
             }
         }
 
-        // Set the background on page load
+        // Fetch top anime images from Jikan API (MyAnimeList data)
+        async function fetchTopAnimeImages() {
+            try {
+                const response = await fetch(`${JIKAN_API_URL}?limit=50`);
+                const data = await response.json();
+                if (data && data.data && data.data.length > 0) {
+                    // Extract image URLs from each anime, filtering valid entries
+                    return data.data
+                        .filter(anime => anime.images && anime.images.jpg && anime.images.jpg.image_url)
+                        .map(anime => anime.images.jpg.image_url);
+                }
+                throw new Error('No anime data found');
+            } catch (error) {
+                console.error('Failed to fetch from Jikan API:', error);
+                return [];
+            }
+        }
+
+        // Set the background on page load using random.org for selection
         async function setRandomBackground() {
-            const backgroundUrl = await fetchAnimeWallpaper();
-            document.body.style.backgroundImage = `url('${backgroundUrl}')`;
+            try {
+                const animeImages = await fetchTopAnimeImages();
+                let backgroundUrl;
+
+                if (animeImages.length > 0) {
+                    // Get a random index using random.org (or Math.random fallback)
+                    const randomIndex = await getRandomNumber(0, animeImages.length - 1);
+                    backgroundUrl = animeImages[randomIndex];
+                    console.log(`Selected anime background: ${backgroundUrl}`);
+                } else {
+                    // Fallback if no images from API
+                    const randomIndex = Math.floor(Math.random() * fallbackBackgrounds.length);
+                    backgroundUrl = fallbackBackgrounds[randomIndex];
+                }
+
+                document.body.style.backgroundImage = `url('${backgroundUrl}')`;
+            } catch (error) {
+                console.error('Failed to set background:', error);
+                document.body.style.backgroundImage = `url('${fallbackBackgrounds[0]}')`;
+            }
         }
 
         // Initialize background
