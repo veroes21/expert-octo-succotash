@@ -450,7 +450,7 @@
             </div>
             
             <div class="controls">
-                <button @click="startGame" :disabled="gameStarted || loading">Deal</button>
+                <button @click="startGame" :disabled="loading">Deal</button>
                 <button @click="hit" :disabled="!gameStarted || gameOver || loading">Hit</button>
                 <button @click="stand" :disabled="!gameStarted || gameOver || loading">Stand</button>
             </div>
