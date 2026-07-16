@@ -471,14 +471,13 @@
         const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
         const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
 
-        // MyAnimeList API configuration
-        const MAL_CLIENT_ID = 'd4d8f85c66d4583d82e996b19da2ba93';
-        const MAL_API_URL = 'https://api.myanimelist.net/v2/anime/ranking';
+        // Jikan API (unofficial MyAnimeList API) - no CORS issues
+        const JIKAN_API_URL = 'https://api.jikan.moe/v4/top/anime';
 
-        // Fallback backgrounds (non-imgur)
+        // Fallback backgrounds
         const fallbackBackgrounds = [
             'https://media.tenor.com/nl9X0YQ1X1MAAAAC/mini-yaemori-rent-a-girlfriend.gif',
-            'https://via.placeholder.com/1920x1080/1a1a2e/9b59b6?text=Anime+Blackjack'
+            'https://placehold.co/1920x1080/1a1a2e/9b59b6?text=Anime+Blackjack'
         ];
 
         // Helper function to get a random number, trying random.org first
@@ -519,24 +518,20 @@
             }
         }
 
-        // Fetch top anime images from MyAnimeList API (this season)
+        // Fetch top anime images from Jikan API (MyAnimeList data)
         async function fetchTopAnimeImages() {
             try {
-                const response = await fetch(`${MAL_API_URL}?ranking_type=airing&limit=20`, {
-                    headers: {
-                        'X-MAL-CLIENT-ID': MAL_CLIENT_ID
-                    }
-                });
+                const response = await fetch(`${JIKAN_API_URL}?limit=20`);
                 const data = await response.json();
                 if (data && data.data && data.data.length > 0) {
-                    // Extract main picture URLs from each anime
+                    // Extract image URLs from each anime, filtering valid entries
                     return data.data
-                        .map(anime => anime.node && anime.node.main_picture && anime.node.main_picture.large)
-                        .filter(url => url);
+                        .filter(anime => anime.images && anime.images.jpg && anime.images.jpg.image_url)
+                        .map(anime => anime.images.jpg.image_url);
                 }
                 throw new Error('No anime data found');
             } catch (error) {
-                console.error('Failed to fetch from MyAnimeList API:', error);
+                console.error('Failed to fetch from Jikan API:', error);
                 return [];
             }
         }
