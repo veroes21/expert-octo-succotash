@@ -471,8 +471,8 @@
         const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
         const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
 
-        // Jikan API (unofficial MyAnimeList API) - no CORS issues
-        const JIKAN_API_URL = 'https://api.jikan.moe/v4/top/anime';
+        // Unsplash API for anime backgrounds (no auth required for random images)
+        const UNSPLASH_API_URL = 'https://source.unsplash.com/random/1920x1080/?anime,girl';
 
         // Fallback backgrounds
         const fallbackBackgrounds = [
@@ -518,20 +518,14 @@
             }
         }
 
-        // Fetch top anime images from Jikan API (MyAnimeList data)
+        // Fetch anime background from Unsplash
         async function fetchTopAnimeImages() {
             try {
-                const response = await fetch(`${JIKAN_API_URL}?limit=20`);
-                const data = await response.json();
-                if (data && data.data && data.data.length > 0) {
-                    // Extract image URLs from each anime, filtering valid entries
-                    return data.data
-                        .filter(anime => anime.images && anime.images.jpg && anime.images.jpg.image_url)
-                        .map(anime => anime.images.jpg.image_url);
-                }
-                throw new Error('No anime data found');
+                // Unsplash source API returns a redirect, so we just return the URL directly
+                // Add timestamp to prevent caching
+                return [`${UNSPLASH_API_URL}&t=${Date.now()}`];
             } catch (error) {
-                console.error('Failed to fetch from Jikan API:', error);
+                console.error('Failed to fetch from Unsplash API:', error);
                 return [];
             }
         }
