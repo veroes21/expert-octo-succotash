@@ -636,14 +636,12 @@
                         // We'll fetch 60 numbers to have a buffer, all in range [0, 51]
                         randomCache.value = await fetchRandomNumbers(60, 0, 51);
                         cacheIndex.value = 0;
-                        usingRandomOrg.value = true;
-                        console.log('Successfully loaded random numbers from random.org');
+                        console.log('Successfully loaded random numbers');
                     } catch (error) {
                         console.error('Failed to preload random numbers:', error);
                         // Ensure we still have a fallback
                         randomCache.value = [];
                         cacheIndex.value = 0;
-                        usingRandomOrg.value = false;
                         loadingMessage.value = 'Using local randomness...';
                     } finally {
                         loading.value = false;
