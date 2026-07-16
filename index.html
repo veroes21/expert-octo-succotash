@@ -482,6 +482,10 @@
 
         // Helper function to get a random number, trying random.org first
         async function getRandomNumber(min, max) {
+            if (max < min) {
+                return min;
+            }
+
             try {
                 const response = await fetch(RANDOM_ORG_API_URL, {
                     method: 'POST',
@@ -514,7 +518,7 @@
                 throw new Error('Invalid random.org response');
             } catch (error) {
                 console.error('Random.org failed for background, using Math.random:', error);
-                return Math.floor(Math.random() * (max - min + 1)) + min;
+                return Math.floor(Math.random() * (Math.max(max, min) - Math.min(max, min) + 1)) + Math.min(max, min);
             }
         }
 
@@ -535,8 +539,9 @@
                 let backgroundUrl;
 
                 if (animeImages.length > 0) {
-                    // Get a random index using random.org (or Math.random fallback)
-                    const randomIndex = await getRandomNumber(0, animeImages.length - 1);
+                    const randomIndex = animeImages.length > 1
+                        ? await getRandomNumber(0, animeImages.length - 1)
+                        : 0;
                     backgroundUrl = animeImages[randomIndex];
                     console.log(`Selected anime background: ${backgroundUrl}`);
                 } else {
