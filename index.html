@@ -440,7 +440,7 @@
                             <img v-else src="https://deckofcardsapi.com/static/img/back.png" alt="Card back">
                         </div>
                     </div>
-                    <div class="score-display" style="color: var(--accent);">Score: {{ dealerScore }}</div>
+                    <div class="score-display" style="color: var(--accent);">Score: {{ visibleDealerScore }}</div>
                 </div>
                 
                 <div class="hand">
@@ -471,10 +471,9 @@
         const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
         const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
 
-        // MyAnimeList API callback links:
-        // Official MAL API: https://api.myanimelist.net/v2/anime/ranking (requires OAuth)
-        // Jikan (unofficial MAL API): https://api.jikan.moe/v4/top/anime (no auth needed)
-        const JIKAN_API_URL = 'https://api.jikan.moe/v4/top/anime';
+        // MyAnimeList API configuration
+        const MAL_CLIENT_ID = 'd4d8f85c66d4583d82e996b19da2ba93';
+        const MAL_API_URL = 'https://api.myanimelist.net/v2/anime/ranking';
 
         // Fallback backgrounds (non-imgur)
         const fallbackBackgrounds = [
@@ -520,20 +519,24 @@
             }
         }
 
-        // Fetch top anime images from Jikan API (MyAnimeList data)
+        // Fetch top anime images from MyAnimeList API (this season)
         async function fetchTopAnimeImages() {
             try {
-                const response = await fetch(`${JIKAN_API_URL}?limit=50`);
+                const response = await fetch(`${MAL_API_URL}?ranking_type=airing&limit=20`, {
+                    headers: {
+                        'X-MAL-CLIENT-ID': MAL_CLIENT_ID
+                    }
+                });
                 const data = await response.json();
                 if (data && data.data && data.data.length > 0) {
-                    // Extract image URLs from each anime, filtering valid entries
+                    // Extract main picture URLs from each anime
                     return data.data
-                        .filter(anime => anime.images && anime.images.jpg && anime.images.jpg.image_url)
-                        .map(anime => anime.images.jpg.image_url);
+                        .map(anime => anime.node && anime.node.main_picture && anime.node.main_picture.large)
+                        .filter(url => url);
                 }
                 throw new Error('No anime data found');
             } catch (error) {
-                console.error('Failed to fetch from Jikan API:', error);
+                console.error('Failed to fetch from MyAnimeList API:', error);
                 return [];
             }
         }
@@ -596,6 +599,12 @@
 
                 const playerScore = computed(() => calculateScore(playerHand.value));
                 const dealerScore = computed(() => calculateScore(dealerHand.value));
+                const visibleDealerScore = computed(() => {
+                    if (gameOver.value) return dealerScore.value;
+                    // Only show the value of the second card while first is hidden
+                    const visibleCards = dealerHand.value.slice(1);
+                    return calculateScore(visibleCards);
+                });
 
                 function getSuitSymbol(suit) {
                     return suitSymbols[suit] || suit;
@@ -773,6 +782,7 @@
                     gameStatus,
                     playerScore,
                     dealerScore,
+                    visibleDealerScore,
                     getSuitSymbol,
                     getCardImage,
                     startGame,
