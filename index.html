@@ -476,8 +476,8 @@
 
         // Fallback backgrounds
         const fallbackBackgrounds = [
-            'https://media.tenor.com/nl9X0YQ1X1MAAAAC/mini-yaemori-rent-a-girlfriend.gif',
-            'https://placehold.co/1920x1080/1a1a2e/9b59b6?text=Anime+Blackjack'
+            './assets/anime-girl-bg.svg',
+            './assets/anime-girl-bg.svg'
         ];
 
         // Helper function to get a random number, trying random.org first
@@ -518,14 +518,12 @@
             }
         }
 
-        // Fetch anime background from Unsplash
+        // Fetch anime background from a local static asset
         async function fetchTopAnimeImages() {
             try {
-                // Unsplash source API returns a redirect, so we just return the URL directly
-                // Add timestamp to prevent caching
-                return [`${UNSPLASH_API_URL}&t=${Date.now()}`];
+                return ['./assets/anime-girl-bg.svg'];
             } catch (error) {
-                console.error('Failed to fetch from Unsplash API:', error);
+                console.error('Failed to load local anime background:', error);
                 return [];
             }
         }
