@@ -481,47 +481,6 @@
         ];
 
         // Helper function to get a random number, trying random.org first
-        async function getRandomNumber(min, max) {
-            if (max < min) {
-                return min;
-            }
-
-            try {
-                const response = await fetch(RANDOM_ORG_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        jsonrpc: "2.0",
-                        method: "generateIntegers",
-                        params: {
-                            apiKey: RANDOM_ORG_API_KEY,
-                            n: 1,
-                            min: min,
-                            max: max,
-                            replacement: true
-                        },
-                        id: 1
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error('Random.org API error: ' + data.error.message);
-                }
-
-                if (data.result && data.result.random && data.result.random.data) {
-                    console.log('Successfully fetched random number from random.org for background');
-                    return data.result.random.data[0];
-                }
-
-                throw new Error('Invalid random.org response');
-            } catch (error) {
-                console.error('Random.org failed for background, using Math.random:', error);
-                return Math.floor(Math.random() * (Math.max(max, min) - Math.min(max, min) + 1)) + Math.min(max, min);
-            }
-        }
-
         // Fetch anime background from a local static asset
         async function fetchTopAnimeImages() {
             try {
@@ -536,20 +495,11 @@
         async function setRandomBackground() {
             try {
                 const animeImages = await fetchTopAnimeImages();
-                let backgroundUrl;
+                const backgroundUrl = animeImages.length > 0
+                    ? animeImages[0]
+                    : fallbackBackgrounds[0];
 
-                if (animeImages.length > 0) {
-                    const randomIndex = animeImages.length > 1
-                        ? await getRandomNumber(0, animeImages.length - 1)
-                        : 0;
-                    backgroundUrl = animeImages[randomIndex];
-                    console.log(`Selected anime background: ${backgroundUrl}`);
-                } else {
-                    // Fallback if no images from API
-                    const randomIndex = Math.floor(Math.random() * fallbackBackgrounds.length);
-                    backgroundUrl = fallbackBackgrounds[randomIndex];
-                }
-
+                console.log(`Selected anime background: ${backgroundUrl}`);
                 document.body.style.backgroundImage = `url('${backgroundUrl}')`;
             } catch (error) {
                 console.error('Failed to set background:', error);
