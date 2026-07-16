@@ -346,7 +346,13 @@
             color: var(--text-dim);
         }
 
-
+        .wallet-display {
+            margin: 15px 0 10px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
+        }
 
         .loading-overlay {
             position: fixed;
@@ -423,9 +429,7 @@
         
         <div class="game-container">
             <h1>Anime Blackjack</h1>
-            <div class="random-status" :style="{ color: usingRandomOrg ? 'var(--gold)' : 'var(--text-dim)' }">
-                {{ usingRandomOrg ? 'Using RANDOM.ORG for true random shuffles' : 'Using local randomness (RANDOM.ORG unavailable)' }}
-            </div>
+            <div class="wallet-display">Bank: {{ currency }} chips</div>
             
             <div class="status" :class="gameStatus.class">{{ gameStatus.message }}</div>
             
@@ -516,6 +520,10 @@
                 const suits = ['H', 'D', 'C', 'S'];
                 const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
+                const COOKIE_NAME = 'anime_blackjack_currency';
+                const DEFAULT_CURRENCY = 500;
+                const BET_AMOUNT = 10;
+
                 let deck = ref([]);
                 let playerHand = ref([]);
                 let dealerHand = ref([]);
@@ -525,7 +533,25 @@
                 let loadingMessage = ref('Shuffling with true randomness...');
                 let randomCache = ref([]);
                 let cacheIndex = ref(0);
-                let usingRandomOrg = ref(true);
+                let currency = ref(readCurrencyCookie());
+
+                function readCurrencyCookie() {
+                    const match = document.cookie.match(new RegExp('(?:^|; )' + COOKIE_NAME + '=([^;]*)'));
+                    if (!match) return DEFAULT_CURRENCY;
+
+                    const parsed = Number.parseInt(decodeURIComponent(match[1]), 10);
+                    return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_CURRENCY;
+                }
+
+                function writeCurrencyCookie(value) {
+                    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+                    document.cookie = `${COOKIE_NAME}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+                }
+
+                function updateCurrency(nextValue) {
+                    currency.value = nextValue;
+                    writeCurrencyCookie(nextValue);
+                }
 
                 const gameStatus = computed(() => {
                     if (!gameStarted.value) return { message: 'Ready to play?', class: '' };
@@ -684,7 +710,30 @@
                     return deck.value.pop();
                 }
 
+                function resolveRoundResult() {
+                    if (playerScore.value > 21) return 'lose';
+                    if (dealerScore.value > 21) return 'win';
+                    if (playerScore.value === dealerScore.value) return 'push';
+                    return playerScore.value > dealerScore.value ? 'win' : 'lose';
+                }
+
+                function applyRoundPayout(result) {
+                    if (result === 'win') {
+                        updateCurrency(currency.value + BET_AMOUNT * 2);
+                    } else if (result === 'push') {
+                        updateCurrency(currency.value + BET_AMOUNT);
+                    } else {
+                        updateCurrency(currency.value);
+                    }
+                }
+
                 async function startGame() {
+                    if (currency.value < BET_AMOUNT) {
+                        alert('You need at least 10 chips to deal a new hand.');
+                        return;
+                    }
+
+                    updateCurrency(currency.value - BET_AMOUNT);
                     await preloadRandomNumbers();
                     deck.value = createDeck();
                     playerHand.value = [drawCard(), drawCard()];
@@ -695,8 +744,12 @@
 
                 async function hit() {
                     playerHand.value.push(drawCard());
-                    if (playerScore.value >= 21) {
+
+                    if (playerScore.value > 21) {
                         gameOver.value = true;
+                        applyRoundPayout(resolveRoundResult());
+                    } else if (playerScore.value === 21) {
+                        await stand();
                     }
                 }
 
@@ -706,6 +759,8 @@
                     while (dealerScore.value < 17) {
                         dealerHand.value.push(drawCard());
                     }
+
+                    applyRoundPayout(resolveRoundResult());
                 }
 
                 // Auto-start the game when the component is mounted
@@ -720,11 +775,11 @@
                     gameOver,
                     loading,
                     loadingMessage,
-                    usingRandomOrg,
                     gameStatus,
                     playerScore,
                     dealerScore,
                     visibleDealerScore,
+                    currency,
                     getSuitSymbol,
                     getCardImage,
                     startGame,
