@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anime Blackjack</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="./assets/card-utils.js"></script>
+    <script src="./assets/leaderboard-utils.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -172,29 +174,93 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .card img {
+        .card-face {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            background:
+                radial-gradient(circle at top left, rgba(255,255,255,0.95), rgba(245,245,250,0.98) 42%, rgba(230,232,240,1) 100%);
+            color: #1a1a2e;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-weight: 700;
+            box-shadow:
+                inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+                inset 0 0 16px rgba(255, 255, 255, 0.8),
+                0 2px 6px rgba(0, 0, 0, 0.28);
+            border: 2px solid rgba(255,255,255,0.9);
+            overflow: hidden;
+        }
+
+        .card-face img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 10px;
+            display: block;
         }
 
-        /* Anime-style color overlays for suits */
-        .card[data-suit="♥"] img {
-            filter: sepia(100%) saturate(200%) hue-rotate(300deg) brightness(1.2);
-        }
-        .card[data-suit="♦"] img {
-            filter: sepia(100%) saturate(300%) hue-rotate(45deg) brightness(1.1);
-        }
-        .card[data-suit="♣"] img {
-            filter: sepia(50%) saturate(200%) hue-rotate(210deg) brightness(1.1);
-        }
-        .card[data-suit="♠"] img {
-            filter: sepia(0%) saturate(100%) hue-rotate(180deg) brightness(1.1);
+        .card-face::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent 30%, rgba(0,0,0,0.02));
+            pointer-events: none;
         }
 
-        .card.hidden img {
-            filter: brightness(0.6) sepia(100%) saturate(0%) hue-rotate(240deg) brightness(0.8);
+        .card-face[data-suit="♥"],
+        .card-face[data-suit="♦"] {
+            color: #d62839;
+        }
+
+        .card-face[data-suit="♣"],
+        .card-face[data-suit="♠"] {
+            color: #1a1a2e;
+        }
+
+        .card-top,
+        .card-bottom {
+            position: absolute;
+            font-size: 1.05rem;
+            line-height: 1;
+            left: 10px;
+            letter-spacing: 0.04em;
+            text-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-top {
+            top: 10px;
+        }
+
+        .card-bottom {
+            bottom: 10px;
+            right: 10px;
+            left: auto;
+            transform: rotate(180deg);
+        }
+
+        .card-center {
+            font-size: 2.7rem;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.12));
+        }
+
+        .card.hidden .card-face {
+            display: none;
+        }
+
+        .card.hidden::before {
+            content: '🂠';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            background: linear-gradient(135deg, #5f2b76 0%, #2f0f3f 100%);
+            color: #ff79c6;
         }
 
         .card:hover {
@@ -354,6 +420,83 @@
             text-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
         }
 
+        .player-setup {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0 15px;
+            flex-wrap: wrap;
+        }
+
+        .player-setup input {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(155, 89, 182, 0.4);
+            background: rgba(15, 15, 26, 0.9);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            min-width: 180px;
+        }
+
+        .leaderboard {
+            margin: 20px auto 0;
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+            background: rgba(0, 0, 0, 0.2);
+            max-width: 360px;
+            text-align: left;
+        }
+
+        .leaderboard h3 {
+            margin: 0 0 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+        }
+
+        .leaderboard ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .leaderboard li {
+            margin: 6px 0;
+            font-size: 0.95rem;
+        }
+
+        .bet-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .bet-controls label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .bet-controls select {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(155, 89, 182, 0.4);
+            background: rgba(15, 15, 26, 0.9);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -430,6 +573,18 @@
         <div class="game-container">
             <h1>Anime Blackjack</h1>
             <div class="wallet-display">Bank: {{ currency }} chips</div>
+
+            <div class="player-setup">
+                <input v-model="playerName" maxlength="12" placeholder="Enter your username" />
+                <button @click="savePlayerName" :disabled="loading">Save Name</button>
+            </div>
+
+            <div class="bet-controls">
+                <label for="bet-select">Choose your bet</label>
+                <select id="bet-select" v-model.number="betAmount" :disabled="gameStarted && !gameOver">
+                    <option v-for="amount in betOptions" :key="amount" :value="amount">{{ amount }} chips</option>
+                </select>
+            </div>
             
             <div class="status" :class="gameStatus.class">{{ gameStatus.message }}</div>
             
@@ -440,8 +595,9 @@
                         <div class="card" v-for="(card, index) in dealerHand" :key="'d'+index" 
                              :class="{ hidden: index === 0 && !gameOver }" 
                              :data-suit="getSuitSymbol(card.suit)">
-                            <img v-if="!(index === 0 && !gameOver)" :src="getCardImage(card)" :alt="card.value + card.suit">
-                            <img v-else src="https://deckofcardsapi.com/static/img/back.png" alt="Card back">
+                            <div v-if="!(index === 0 && !gameOver)" class="card-face" :data-suit="getSuitSymbol(card.suit)">
+                                <img :src="getCardImageUrl(card)" :alt="`${card.value}${getSuitSymbol(card.suit)}`" />
+                            </div>
                         </div>
                     </div>
                     <div class="score-display" style="color: var(--accent);">Score: {{ visibleDealerScore }}</div>
@@ -452,13 +608,24 @@
                     <div class="cards">
                         <div class="card" v-for="(card, index) in playerHand" :key="'p'+index"
                              :data-suit="getSuitSymbol(card.suit)">
-                            <img :src="getCardImage(card)" :alt="card.value + card.suit">
+                            <div class="card-face" :data-suit="getSuitSymbol(card.suit)">
+                                <img :src="getCardImageUrl(card)" :alt="`${card.value}${getSuitSymbol(card.suit)}`" />
+                            </div>
                         </div>
                     </div>
                     <div class="score-display" style="color: var(--gold);">Score: {{ playerScore }}</div>
                 </div>
             </div>
             
+            <div class="leaderboard">
+                <h3>Leaderboard</h3>
+                <ol>
+                    <li v-for="entry in leaderboard" :key="entry.name + entry.balance">
+                        {{ entry.name }} — {{ entry.balance }} chips
+                    </li>
+                </ol>
+            </div>
+
             <div class="controls">
                 <button @click="startGame" :disabled="loading">Deal</button>
                 <button @click="hit" :disabled="!gameStarted || gameOver || loading">Hit</button>
@@ -521,8 +688,11 @@
                 const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
                 const COOKIE_NAME = 'anime_blackjack_currency';
-                const DEFAULT_CURRENCY = 500;
+                const PLAYER_NAME_COOKIE = 'anime_blackjack_player_name';
+                const LEADERBOARD_COOKIE = 'anime_blackjack_leaderboard';
+                const DEFAULT_CURRENCY = 100;
                 const BET_AMOUNT = 10;
+                const BET_OPTIONS = [10, 25, 50, 100];
 
                 let deck = ref([]);
                 let playerHand = ref([]);
@@ -534,6 +704,11 @@
                 let randomCache = ref([]);
                 let cacheIndex = ref(0);
                 let currency = ref(readCurrencyCookie());
+                let playerName = ref(readPlayerNameCookie());
+                let leaderboard = ref(readLeaderboardCookie());
+                let betAmount = ref(BET_AMOUNT);
+                let currentBet = ref(BET_AMOUNT);
+                let roundMessage = ref('Ready to play?');
 
                 function readCurrencyCookie() {
                     const match = document.cookie.match(new RegExp('(?:^|; )' + COOKIE_NAME + '=([^;]*)'));
@@ -548,21 +723,47 @@
                     document.cookie = `${COOKIE_NAME}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
                 }
 
+                function readPlayerNameCookie() {
+                    const match = document.cookie.match(new RegExp('(?:^|; )' + PLAYER_NAME_COOKIE + '=([^;]*)'));
+                    if (!match) return '';
+                    return decodeURIComponent(match[1]);
+                }
+
+                function writePlayerNameCookie(value) {
+                    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+                    document.cookie = `${PLAYER_NAME_COOKIE}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+                }
+
+                function readLeaderboardCookie() {
+                    const match = document.cookie.match(new RegExp('(?:^|; )' + LEADERBOARD_COOKIE + '=([^;]*)'));
+                    if (!match) return [];
+                    try {
+                        return JSON.parse(decodeURIComponent(match[1]));
+                    } catch (error) {
+                        return [];
+                    }
+                }
+
+                function writeLeaderboardCookie(entries) {
+                    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+                    document.cookie = `${LEADERBOARD_COOKIE}=${encodeURIComponent(JSON.stringify(entries))}; expires=${expires}; path=/; SameSite=Lax`;
+                }
+
                 function updateCurrency(nextValue) {
                     currency.value = nextValue;
                     writeCurrencyCookie(nextValue);
                 }
 
                 const gameStatus = computed(() => {
-                    if (!gameStarted.value) return { message: 'Ready to play?', class: '' };
+                    if (!gameStarted.value) return { message: roundMessage.value, class: '' };
                     if (gameOver.value) {
-                        if (playerScore.value > 21) return { message: 'BUST! Dealer Wins', class: 'lose' };
-                        if (dealerScore.value > 21) return { message: 'Dealer BUSTS! You Win!', class: 'win' };
-                        if (playerScore.value === dealerScore.value) return { message: 'PUSH! It\'s a tie', class: 'push' };
-                        if (playerScore.value > dealerScore.value) return { message: 'YOU WIN!', class: 'win' };
-                        if (dealerScore.value > playerScore.value) return { message: 'DEALER WINS', class: 'lose' };
+                        if (playerScore.value > 21) return { message: roundMessage.value || 'BUST! Dealer Wins', class: 'lose' };
+                        if (dealerScore.value > 21) return { message: roundMessage.value || 'Dealer BUSTS! You Win!', class: 'win' };
+                        if (playerScore.value === dealerScore.value) return { message: roundMessage.value || 'PUSH! It\'s a tie', class: 'push' };
+                        if (playerScore.value > dealerScore.value) return { message: roundMessage.value || 'YOU WIN!', class: 'win' };
+                        if (dealerScore.value > playerScore.value) return { message: roundMessage.value || 'DEALER WINS', class: 'lose' };
                     }
-                    return { message: 'Your move!', class: '' };
+                    return { message: roundMessage.value || 'Your move!', class: '' };
                 });
 
                 const playerScore = computed(() => calculateScore(playerHand.value));
@@ -578,8 +779,9 @@
                     return suitSymbols[suit] || suit;
                 }
 
-                function getCardImage(card) {
-                    return `https://deckofcardsapi.com/static/img/${card.value}${card.suit}.png`;
+                function getCardImageUrl(card) {
+                    if (!card) return '';
+                    return window.cardUtils?.getCardImageUrl ? window.cardUtils.getCardImageUrl(card) : '';
                 }
 
                 async function fetchRandomNumbers(count, min, max) {
@@ -715,29 +917,56 @@
                     return playerScore.value > dealerScore.value ? 'win' : 'lose';
                 }
 
+                function getRoundOutcomeMessage() {
+                    if (playerScore.value > 21) return `BUST! Dealer Wins -${currentBet.value} chips`;
+                    if (dealerScore.value > 21) return `Dealer Busts! You Win! +${currentBet.value} chips`;
+                    if (playerScore.value === dealerScore.value) return 'PUSH! +0 chips';
+                    if (playerScore.value > dealerScore.value) return `YOU WIN! +${currentBet.value} chips`;
+                    return `DEALER WINS! -${currentBet.value} chips`;
+                }
+
                 function applyRoundPayout(result) {
                     if (result === 'win') {
-                        updateCurrency(currency.value + BET_AMOUNT * 2);
+                        updateCurrency(currency.value + currentBet.value * 2);
                     } else if (result === 'push') {
-                        updateCurrency(currency.value + BET_AMOUNT);
+                        updateCurrency(currency.value + currentBet.value);
                     } else {
                         updateCurrency(currency.value);
                     }
+
+                    const normalizedName = window.leaderboardUtils?.normalizeUsername(playerName.value) || 'Player';
+                    const nextEntries = window.leaderboardUtils?.mergeLeaderboardEntry(leaderboard.value, { name: normalizedName, balance: currency.value }, 5) || leaderboard.value;
+                    leaderboard.value = nextEntries;
+                    writeLeaderboardCookie(nextEntries);
+                    roundMessage.value = getRoundOutcomeMessage();
+                }
+
+                function savePlayerName() {
+                    const normalizedName = window.leaderboardUtils?.normalizeUsername(playerName.value) || 'Player';
+                    playerName.value = normalizedName || 'Player';
+                    writePlayerNameCookie(playerName.value);
+                    roundMessage.value = `Welcome, ${playerName.value}!`;
                 }
 
                 async function startGame() {
-                    if (currency.value < BET_AMOUNT) {
-                        alert('You need at least 10 chips to deal a new hand.');
+                    if (currency.value < betAmount.value) {
+                        alert(`You need at least ${betAmount.value} chips to deal a new hand.`);
                         return;
                     }
 
-                    updateCurrency(currency.value - BET_AMOUNT);
+                    currentBet.value = betAmount.value;
+                    roundMessage.value = 'Your move!';
+                    updateCurrency(currency.value - currentBet.value);
                     await preloadRandomNumbers();
                     deck.value = createDeck();
                     playerHand.value = [drawCard(), drawCard()];
                     dealerHand.value = [drawCard(), drawCard()];
                     gameStarted.value = true;
                     gameOver.value = false;
+
+                    if (playerScore.value === 21) {
+                        await stand();
+                    }
                 }
 
                 async function hit() {
@@ -778,8 +1007,14 @@
                     dealerScore,
                     visibleDealerScore,
                     currency,
+                    playerName,
+                    leaderboard,
+                    betAmount,
+                    betOptions: BET_OPTIONS,
+                    roundMessage,
                     getSuitSymbol,
-                    getCardImage,
+                    getCardImageUrl,
+                    savePlayerName,
                     startGame,
                     hit,
                     stand
