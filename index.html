@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Blackjack</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="./assets/card-utils.js"></script>
+    <script src="./assets/leaderboard-utils.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #9b59b6;
+            --primary-dark: #6c3483;
+            --primary-glow: #a569bd;
+            --accent: #ff79c6;
+            --accent-glow: #ff8fab;
+            --gold: #f1c40f;
+            --gold-glow: #f5d742;
+            --dark: #1a1a2e;
+            --darker: #0f0f1a;
+            --text: #e0e0e0;
+            --text-dim: #a0a0b0;
+        }
+
+        * {
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--darker);
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            position: relative;
+            -moz-osx-font-smoothing: grayscale;
+            -moz-text-size-adjust: 100%;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+        }
+
+        .game-container {
+            background: rgba(26, 26, 46, 0.85);
+            padding: 35px;
+            border-radius: 20px;
+            border: 2px solid var(--primary);
+            box-shadow: 
+                0 0 30px rgba(155, 89, 182, 0.4),
+                inset 0 0 30px rgba(155, 89, 182, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 900px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Firefox-compatible blur effect (replaces backdrop-filter) */
+        .game-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: inherit;
+            filter: blur(10px);
+            z-index: -1;
+            opacity: 0.7;
+        }
+
+        /* Glow animation overlay */
+        .game-container::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 40%,
+                rgba(155, 89, 182, 0.03) 45%,
+                rgba(155, 89, 182, 0.06) 50%,
+                rgba(155, 89, 182, 0.03) 55%,
+                transparent 60%
+            );
+            animation: glowPulse 8s linear infinite;
+            pointer-events: none;
+        }
+
+        @-moz-keyframes glowPulse {
+            0% { -moz-transform: rotate(0deg); }
+            100% { -moz-transform: rotate(360deg); }
+        }
+        @keyframes glowPulse {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h1 {
+            margin: 0 0 25px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--gold);
+            text-shadow: 
+                0 0 10px var(--gold-glow),
+                0 0 20px var(--gold-glow),
+                0 0 40px var(--gold-glow);
+            letter-spacing: 4px;
+        }
+
+        .hands {
+            display: flex;
+            justify-content: space-between;
+            margin: 25px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .hand {
+            min-width: 250px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .hand-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .cards {
+            display: flex;
+            flex-direction: row;
+            margin-left: 80px;
+            min-height: 140px;
+        }
+
+        .card {
+            width: 100px;
+            height: 140px;
+            border-radius: 12px;
+            position: relative;
+            margin-left: -75px;
+            transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+            overflow: hidden;
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(155, 89, 182, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-face {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            background:
+                radial-gradient(circle at top left, rgba(255,255,255,0.95), rgba(245,245,250,0.98) 42%, rgba(230,232,240,1) 100%);
+            color: #1a1a2e;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-weight: 700;
+            box-shadow:
+                inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+                inset 0 0 16px rgba(255, 255, 255, 0.8),
+                0 2px 6px rgba(0, 0, 0, 0.28);
+            border: 2px solid rgba(255,255,255,0.9);
+            overflow: hidden;
+        }
+
+        .card-face img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .card-face::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent 30%, rgba(0,0,0,0.02));
+            pointer-events: none;
+        }
+
+        .card-face[data-suit="♥"],
+        .card-face[data-suit="♦"] {
+            color: #d62839;
+        }
+
+        .card-face[data-suit="♣"],
+        .card-face[data-suit="♠"] {
+            color: #1a1a2e;
+        }
+
+        .card-top,
+        .card-bottom {
+            position: absolute;
+            font-size: 1.05rem;
+            line-height: 1;
+            left: 10px;
+            letter-spacing: 0.04em;
+            text-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-top {
+            top: 10px;
+        }
+
+        .card-bottom {
+            bottom: 10px;
+            right: 10px;
+            left: auto;
+            transform: rotate(180deg);
+        }
+
+        .card-center {
+            font-size: 2.7rem;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.12));
+        }
+
+        .card.hidden .card-face {
+            display: none;
+        }
+
+        .card.hidden::before {
+            content: '🂠';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            background: linear-gradient(135deg, #5f2b76 0%, #2f0f3f 100%);
+            color: #ff79c6;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 
+                0 12px 30px rgba(155, 89, 182, 0.5),
+                0 0 40px rgba(155, 89, 182, 0.2);
+            z-index: 10;
+        }
+
+        .card.hidden {
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 121, 198, 0.3);
+            border: 1px solid rgba(255, 121, 198, 0.2);
+        }
+
+        .controls {
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #fff;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 
+                0 4px 15px rgba(155, 89, 182, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+                0 8px 25px rgba(155, 89, 182, 0.6),
+                0 0 40px rgba(155, 89, 182, 0.3);
+            background: linear-gradient(135deg, var(--primary-glow) 0%, var(--primary) 100%);
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            background: linear-gradient(135deg, #444 0%, #333 100%);
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.6;
+            transform: none;
+        }
+
+        button:disabled:hover::before {
+            left: -100%;
+        }
+
+        .status {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin: 20px 0;
+            min-height: 40px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px currentColor;
+        }
+
+        .status.win {
+            color: var(--accent);
+            animation: pulseWin 1s ease-in-out;
+        }
+
+        .status.lose {
+            color: #ff4757;
+            animation: pulseLose 1s ease-in-out;
+        }
+
+        .status.push {
+            color: var(--gold);
+            animation: pulsePush 1s ease-in-out;
+        }
+
+        .random-status {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        @-moz-keyframes pulseWin {
+            0%, 100% { -moz-transform: scale(1); }
+            50% { -moz-transform: scale(1.05); }
+        }
+        @keyframes pulseWin {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @-moz-keyframes pulseLose {
+            0%, 100% { -moz-transform: scale(1); }
+            50% { -moz-transform: scale(1.03); }
+        }
+        @keyframes pulseLose {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        @-moz-keyframes pulsePush {
+            0%, 100% { -moz-transform: scale(1); text-shadow: 0 0 15px var(--gold); }
+            50% { -moz-transform: scale(1.04); text-shadow: 0 0 25px var(--gold-glow); }
+        }
+        @keyframes pulsePush {
+            0%, 100% { transform: scale(1); text-shadow: 0 0 15px var(--gold); }
+            50% { transform: scale(1.04); text-shadow: 0 0 25px var(--gold-glow); }
+        }
+
+        .score-display {
+            margin-top: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--text-dim);
+        }
+
+        .wallet-display {
+            margin: 15px 0 10px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
+        }
+
+        .player-setup {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0 15px;
+            flex-wrap: wrap;
+        }
+
+        .player-setup input {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(155, 89, 182, 0.4);
+            background: rgba(15, 15, 26, 0.9);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            min-width: 180px;
+        }
+
+        .leaderboard {
+            margin: 20px auto 0;
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+            background: rgba(0, 0, 0, 0.2);
+            max-width: 360px;
+            text-align: left;
+        }
+
+        .leaderboard h3 {
+            margin: 0 0 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+        }
+
+        .leaderboard ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .leaderboard li {
+            margin: 6px 0;
+            font-size: 0.95rem;
+        }
+
+        .bet-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .bet-controls label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .bet-controls select {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(155, 89, 182, 0.4);
+            background: rgba(15, 15, 26, 0.9);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(241, 196, 15, 0.2);
+            border-top: 4px solid var(--gold);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @-moz-keyframes spin {
+            0% { -moz-transform: rotate(0deg); }
+            100% { -moz-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .hands {
+                flex-direction: column;
+                align-items: center;
+            }
+            .hand {
+                min-width: 100%;
+            }
+            .cards {
+                margin-left: 50px;
+                justify-content: center;
+            }
+            .card {
+                margin-left: -50px;
+            }
+            .card:first-child {
+                margin-left: 0;
+            }
+            .game-container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            .status {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Loading overlay for random.org API calls -->
+        <div class="loading-overlay" v-if="loading">
+            <div class="spinner"></div>
+            <span>{{ loadingMessage }}</span>
+        </div>
+        
+        <div class="game-container">
+            <h1>Anime Blackjack</h1>
+            <div class="wallet-display">Bank: {{ currency }} chips</div>
+
+            <div class="player-setup">
+                <input v-model="playerName" maxlength="12" placeholder="Enter your username" />
+                <button @click="savePlayerName" :disabled="loading">Save Name</button>
+            </div>
+
+            <div class="bet-controls">
+                <label for="bet-select">Choose your bet</label>
+                <select id="bet-select" v-model.number="betAmount" :disabled="gameStarted && !gameOver">
+                    <option v-for="amount in betOptions" :key="amount" :value="amount">{{ amount }} chips</option>
+                </select>
+            </div>
+            
+            <div class="status" :class="gameStatus.class">{{ gameStatus.message }}</div>
+            
+            <div class="hands">
+                <div class="hand">
+                    <div class="hand-title">Dealer Hand</div>
+                    <div class="cards">
+                        <div class="card" v-for="(card, index) in dealerHand" :key="'d'+index" 
+                             :class="{ hidden: index === 0 && !gameOver }" 
+                             :data-suit="getSuitSymbol(card.suit)">
+                            <div v-if="!(index === 0 && !gameOver)" class="card-face" :data-suit="getSuitSymbol(card.suit)">
+                                <img :src="getCardImageUrl(card)" :alt="`${card.value}${getSuitSymbol(card.suit)}`" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="score-display" style="color: var(--accent);">Score: {{ visibleDealerScore }}</div>
+                </div>
+                
+                <div class="hand">
+                    <div class="hand-title">Your Hand</div>
+                    <div class="cards">
+                        <div class="card" v-for="(card, index) in playerHand" :key="'p'+index"
+                             :data-suit="getSuitSymbol(card.suit)">
+                            <div class="card-face" :data-suit="getSuitSymbol(card.suit)">
+                                <img :src="getCardImageUrl(card)" :alt="`${card.value}${getSuitSymbol(card.suit)}`" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="score-display" style="color: var(--gold);">Score: {{ playerScore }}</div>
+                </div>
+            </div>
+            
+            <div class="leaderboard">
+                <h3>Leaderboard</h3>
+                <ol>
+                    <li v-for="entry in leaderboard" :key="entry.name + entry.balance">
+                        {{ entry.name }} — {{ entry.balance }} chips
+                    </li>
+                </ol>
+            </div>
+
+            <div class="controls">
+                <button @click="startGame" :disabled="loading">Deal</button>
+                <button @click="hit" :disabled="!gameStarted || gameOver || loading">Hit</button>
+                <button @click="stand" :disabled="!gameStarted || gameOver || loading">Stand</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        // Configuration - Using random.org API directly with your API key
+        // Fallback to Math.random if the API fails or runs out
+        const RANDOM_ORG_API_KEY = '2735003b-59c1-40e0-8225-a990378986c9';
+        const RANDOM_ORG_API_URL = 'https://api.random.org/json-rpc/4/invoke';
+
+        // Unsplash API for anime backgrounds (no auth required for random images)
+        const UNSPLASH_API_URL = 'https://source.unsplash.com/random/1920x1080/?anime,girl';
+
+        // Fallback backgrounds
+        const fallbackBackgrounds = [
+            './assets/anime-girl-bg.svg',
+            './assets/anime-girl-bg.svg'
+        ];
+
+        // Helper function to get a random number, trying random.org first
+        // Fetch anime background from a local static asset
+        async function fetchTopAnimeImages() {
+            try {
+                return ['./assets/anime-girl-bg.svg'];
+            } catch (error) {
+                console.error('Failed to load local anime background:', error);
+                return [];
+            }
+        }
+
+        // Set the background on page load using random.org for selection
+        async function setRandomBackground() {
+            try {
+                const animeImages = await fetchTopAnimeImages();
+                const backgroundUrl = animeImages.length > 0
+                    ? animeImages[0]
+                    : fallbackBackgrounds[0];
+
+                console.log(`Selected anime background: ${backgroundUrl}`);
+                document.body.style.backgroundImage = `url('${backgroundUrl}')`;
+            } catch (error) {
+                console.error('Failed to set background:', error);
+                document.body.style.backgroundImage = `url('${fallbackBackgrounds[0]}')`;
+            }
+        }
+
+        // Initialize background
+        setRandomBackground();
+
+        createApp({
+            setup() {
+                const suitSymbols = { 'H': '♥', 'D': '♦', 'C': '♣', 'S': '♠' };
+                const suits = ['H', 'D', 'C', 'S'];
+                const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+                const COOKIE_NAME = 'anime_blackjack_currency';
+                const PLAYER_NAME_COOKIE = 'anime_blackjack_player_name';
+                const LEADERBOARD_COOKIE = 'anime_blackjack_leaderboard';
+                const DEFAULT_CURRENCY = 100;
+                const BET_AMOUNT = 10;
+                const BET_OPTIONS = [10, 25, 50, 100];
+
+                let deck = ref([]);
+                let playerHand = ref([]);
+                let dealerHand = ref([]);
+                let gameStarted = ref(false);
+                let gameOver = ref(false);
+                let loading = ref(false);
+                let loadingMessage = ref('Shuffling with true randomness...');
+                let randomCache = ref([]);
+                let cacheIndex = ref(0);
+                let currency = ref(readCurrencyCookie());
+                let playerName = ref(readPlayerNameCookie());
+                let leaderboard = ref(readLeaderboardCookie());
+                let betAmount = ref(BET_AMOUNT);
+                let currentBet = ref(BET_AMOUNT);
+                let roundMessage = ref('Ready to play?');
+
+                function readCurrencyCookie() {
+                    const match = document.cookie.match(new RegExp('(?:^|; )' + COOKIE_NAME + '=([^;]*)'));
+                    if (!match) return DEFAULT_CURRENCY;
+
+                    const parsed = Number.parseInt(decodeURIComponent(match[1]), 10);
+                    return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_CURRENCY;
+                }
+
+                function writeCurrencyCookie(value) {
+                    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+                    document.cookie = `${COOKIE_NAME}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+                }
+
+                function readPlayerNameCookie() {
+                    const match = document.cookie.match(new RegExp('(?:^|; )' + PLAYER_NAME_COOKIE + '=([^;]*)'));
+                    if (!match) return '';
+                    return decodeURIComponent(match[1]);
+                }
+
+                function writePlayerNameCookie(value) {
+                    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+                    document.cookie = `${PLAYER_NAME_COOKIE}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+                }
+
+                function readLeaderboardCookie() {
+                    const match = document.cookie.match(new RegExp('(?:^|; )' + LEADERBOARD_COOKIE + '=([^;]*)'));
+                    if (!match) return [];
+                    try {
+                        return JSON.parse(decodeURIComponent(match[1]));
+                    } catch (error) {
+                        return [];
+                    }
+                }
+
+                function writeLeaderboardCookie(entries) {
+                    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+                    document.cookie = `${LEADERBOARD_COOKIE}=${encodeURIComponent(JSON.stringify(entries))}; expires=${expires}; path=/; SameSite=Lax`;
+                }
+
+                function updateCurrency(nextValue) {
+                    currency.value = nextValue;
+                    writeCurrencyCookie(nextValue);
+                }
+
+                const gameStatus = computed(() => {
+                    if (!gameStarted.value) return { message: roundMessage.value, class: '' };
+                    if (gameOver.value) {
+                        if (playerScore.value > 21) return { message: roundMessage.value || 'BUST! Dealer Wins', class: 'lose' };
+                        if (dealerScore.value > 21) return { message: roundMessage.value || 'Dealer BUSTS! You Win!', class: 'win' };
+                        if (playerScore.value === dealerScore.value) return { message: roundMessage.value || 'PUSH! It\'s a tie', class: 'push' };
+                        if (playerScore.value > dealerScore.value) return { message: roundMessage.value || 'YOU WIN!', class: 'win' };
+                        if (dealerScore.value > playerScore.value) return { message: roundMessage.value || 'DEALER WINS', class: 'lose' };
+                    }
+                    return { message: roundMessage.value || 'Your move!', class: '' };
+                });
+
+                const playerScore = computed(() => calculateScore(playerHand.value));
+                const dealerScore = computed(() => calculateScore(dealerHand.value));
+                const visibleDealerScore = computed(() => {
+                    if (gameOver.value) return dealerScore.value;
+                    // Only show the value of the second card while first is hidden
+                    const visibleCards = dealerHand.value.slice(1);
+                    return calculateScore(visibleCards);
+                });
+
+                function getSuitSymbol(suit) {
+                    return suitSymbols[suit] || suit;
+                }
+
+                function getCardImageUrl(card) {
+                    if (!card) return '';
+                    return window.cardUtils?.getCardImageUrl ? window.cardUtils.getCardImageUrl(card) : '';
+                }
+
+                async function fetchRandomNumbers(count, min, max) {
+                    try {
+                        // Try calling random.org API directly
+                        const response = await fetch(RANDOM_ORG_API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                jsonrpc: "2.0",
+                                method: "generateIntegers",
+                                params: {
+                                    apiKey: RANDOM_ORG_API_KEY,
+                                    n: count,
+                                    min: min,
+                                    max: max,
+                                    replacement: true
+                                },
+                                id: 1
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        // Check for API errors (e.g., rate limits, invalid key)
+                        if (data.error) {
+                            console.error('Random.org API error:', data.error);
+                            throw new Error('Random.org API error: ' + data.error.message);
+                        }
+                        
+                        if (data.result && data.result.random && data.result.random.data) {
+                            console.log('Successfully fetched random numbers from random.org');
+                            return data.result.random.data;
+                        }
+                        
+                        throw new Error('Invalid random.org response');
+                    } catch (error) {
+                        console.error('Random.org API failed, falling back to Math.random:', error);
+                        loadingMessage.value = 'Random.org unavailable, using local randomness...';
+                        // Fallback to Math.random
+                        const result = [];
+                        for (let i = 0; i < count; i++) {
+                            result.push(Math.floor(Math.random() * (max - min + 1)) + min);
+                        }
+                        return result;
+                    }
+                }
+
+                async function preloadRandomNumbers() {
+                    loading.value = true;
+                    loadingMessage.value = 'Shuffling with true randomness...';
+                    try {
+                        // For a full shuffle we need 51 random numbers (for 52 cards)
+                        // We'll fetch 60 numbers to have a buffer, all in range [0, 51]
+                        randomCache.value = await fetchRandomNumbers(60, 0, 51);
+                        cacheIndex.value = 0;
+                        console.log('Successfully loaded random numbers');
+                    } catch (error) {
+                        console.error('Failed to preload random numbers:', error);
+                        // Ensure we still have a fallback
+                        randomCache.value = [];
+                        cacheIndex.value = 0;
+                        loadingMessage.value = 'Using local randomness...';
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                function getRandomFromCache(max) {
+                    if (cacheIndex.value >= randomCache.value.length) {
+                        // Refill cache if empty (or fall back to Math.random)
+                        console.warn('Random cache exhausted, falling back to Math.random');
+                        return Math.floor(Math.random() * (max + 1));
+                    }
+                    const val = randomCache.value[cacheIndex.value] % (max + 1);
+                    cacheIndex.value++;
+                    return val;
+                }
+
+                function shuffle(deckArray) {
+                    const array = [...deckArray];
+                    for (let i = array.length - 1; i > 0; i--) {
+                        const j = getRandomFromCache(i);
+                        [array[i], array[j]] = [array[j], array[i]];
+                    }
+                    return array;
+                }
+
+                function createDeck() {
+                    const newDeck = [];
+                    for (const suit of suits) {
+                        for (const value of values) {
+                            newDeck.push({ suit, value });
+                        }
+                    }
+                    return shuffle(newDeck);
+                }
+
+                function calculateScore(hand) {
+                    let score = 0;
+                    let aces = 0;
+                    
+                    for (const card of hand) {
+                        if (card.value === 'A') {
+                            score += 11;
+                            aces++;
+                        } else if (['K', 'Q', 'J'].includes(card.value)) {
+                            score += 10;
+                        } else {
+                            score += parseInt(card.value);
+                        }
+                    }
+                    
+                    while (score > 21 && aces > 0) {
+                        score -= 10;
+                        aces--;
+                    }
+                    
+                    return score;
+                }
+
+                function drawCard() {
+                    if (deck.value.length < 5) {
+                        deck.value = createDeck();
+                    }
+                    return deck.value.pop();
+                }
+
+                function resolveRoundResult() {
+                    if (playerScore.value > 21) return 'lose';
+                    if (dealerScore.value > 21) return 'win';
+                    if (playerScore.value === dealerScore.value) return 'push';
+                    return playerScore.value > dealerScore.value ? 'win' : 'lose';
+                }
+
+                function getRoundOutcomeMessage() {
+                    if (playerScore.value > 21) return `BUST! Dealer Wins -${currentBet.value} chips`;
+                    if (dealerScore.value > 21) return `Dealer Busts! You Win! +${currentBet.value} chips`;
+                    if (playerScore.value === dealerScore.value) return 'PUSH! +0 chips';
+                    if (playerScore.value > dealerScore.value) return `YOU WIN! +${currentBet.value} chips`;
+                    return `DEALER WINS! -${currentBet.value} chips`;
+                }
+
+                function applyRoundPayout(result) {
+                    if (result === 'win') {
+                        updateCurrency(currency.value + currentBet.value * 2);
+                    } else if (result === 'push') {
+                        updateCurrency(currency.value + currentBet.value);
+                    } else {
+                        updateCurrency(currency.value);
+                    }
+
+                    const normalizedName = window.leaderboardUtils?.normalizeUsername(playerName.value) || 'Player';
+                    const nextEntries = window.leaderboardUtils?.mergeLeaderboardEntry(leaderboard.value, { name: normalizedName, balance: currency.value }, 5) || leaderboard.value;
+                    leaderboard.value = nextEntries;
+                    writeLeaderboardCookie(nextEntries);
+                    roundMessage.value = getRoundOutcomeMessage();
+                }
+
+                function savePlayerName() {
+                    const normalizedName = window.leaderboardUtils?.normalizeUsername(playerName.value) || 'Player';
+                    playerName.value = normalizedName || 'Player';
+                    writePlayerNameCookie(playerName.value);
+                    roundMessage.value = `Welcome, ${playerName.value}!`;
+                }
+
+                async function startGame() {
+                    if (currency.value < betAmount.value) {
+                        alert(`You need at least ${betAmount.value} chips to deal a new hand.`);
+                        return;
+                    }
+
+                    currentBet.value = betAmount.value;
+                    roundMessage.value = 'Your move!';
+                    updateCurrency(currency.value - currentBet.value);
+                    await preloadRandomNumbers();
+                    deck.value = createDeck();
+                    playerHand.value = [drawCard(), drawCard()];
+                    dealerHand.value = [drawCard(), drawCard()];
+                    gameStarted.value = true;
+                    gameOver.value = false;
+
+                    if (playerScore.value === 21) {
+                        await stand();
+                    }
+                }
+
+                async function hit() {
+                    playerHand.value.push(drawCard());
+
+                    if (playerScore.value > 21) {
+                        gameOver.value = true;
+                        applyRoundPayout(resolveRoundResult());
+                    } else if (playerScore.value === 21) {
+                        await stand();
+                    }
+                }
+
+                async function stand() {
+                    gameOver.value = true;
+                    
+                    while (dealerScore.value < 17) {
+                        dealerHand.value.push(drawCard());
+                    }
+
+                    applyRoundPayout(resolveRoundResult());
+                }
+
+                // Auto-start the game when the component is mounted
+                onMounted(async () => {
+                    await startGame();
+                });
+
+                return {
+                    playerHand,
+                    dealerHand,
+                    gameStarted,
+                    gameOver,
+                    loading,
+                    loadingMessage,
+                    gameStatus,
+                    playerScore,
+                    dealerScore,
+                    visibleDealerScore,
+                    currency,
+                    playerName,
+                    leaderboard,
+                    betAmount,
+                    betOptions: BET_OPTIONS,
+                    roundMessage,
+                    getSuitSymbol,
+                    getCardImageUrl,
+                    savePlayerName,
+                    startGame,
+                    hit,
+                    stand
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
